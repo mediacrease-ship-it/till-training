@@ -1,3 +1,4 @@
+import { lookupFood, splitLine } from "./nutrition.js";
 // Reine Logik ohne DOM: Datum, Formatierung, Sessions, Progression, Stagnation, Wochenauswertung.
 
 /* ---------- Datum ---------- */
@@ -268,7 +269,7 @@ export function foodWeek(foods, log, w) {
 export function parseMealText(text) {
   const n = (x) => { const v = parseFloat(String(x).replace(",", ".")); return Number.isFinite(v) ? v : null; };
   const lines = String(text || "").split(/\n+/).map((l) => l.replace(/^[\s\-•*]+/, "").trim()).filter(Boolean);
-  const items = []; let total = null;
+  const items = [], unknown = []; let total = null;
   for (const line of lines) {
     const parts = line.split(/\s*[|;]\s*/);
     const name = parts[0].replace(/[:：]\s*$/, "").trim();
@@ -277,11 +278,19 @@ export function parseMealText(text) {
     if ((m = rest.match(/(\d+(?:[.,]\d+)?)\s*(?:kcal|kalorien)/i))) kcal = n(m[1]);
     if ((m = rest.match(/(\d+(?:[.,]\d+)?)\s*g?\s*(?:protein|eiweiß|eiweiss)/i) || rest.match(/(?:protein|eiweiß|eiweiss)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i))) protein = n(m[1]);
     if (kcal == null && protein == null && parts.length >= 3) { kcal = n(parts[1]); protein = n(parts[2]); }
-    if (kcal == null && protein == null) continue;
+    if (kcal == null && protein == null) {
+      // Kein kcal/Protein angegeben: aus der eingebauten Datenbank berechnen ("2 Weizen Toast mit Nutella")
+      if (/^(summe|gesamt|total)/i.test(name)) continue;
+      for (const seg of splitLine(line)) {
+        const f = lookupFood(seg);
+        if (f) items.push({ name: f.name, kcal: f.kcal, protein: f.protein, calc: true }); else if (seg.replace(/[^a-zäöüß]/gi, "").length > 1) unknown.push(seg);
+      }
+      continue;
+    }
     if (/^(summe|gesamt|total)/i.test(name)) total = { kcal, protein };
     else items.push({ name, kcal, protein });
   }
-  if (!items.length && !total) return null;
+  if (!items.length && !total) return unknown.length ? { name: "", kcal: 0, protein: 0, items: [], unknown } : null;
   const t = total || { kcal: sum(items.map((i) => i.kcal || 0)), protein: sum(items.map((i) => i.protein || 0)) };
-  return { name: items.map((i) => i.name).join(" + ") || "Andere Mahlzeit", kcal: Math.round(t.kcal || 0), protein: Math.round((t.protein || 0) * 10) / 10, items };
+  return { name: items.map((i) => i.name).join(" + ") || "Andere Mahlzeit", kcal: Math.round(t.kcal || 0), protein: Math.round((t.protein || 0) * 10) / 10, items, unknown };
 }

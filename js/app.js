@@ -12,7 +12,7 @@ import { altsFor } from "./alternatives.js";
 import { imgUrls } from "./images.js";
 import { DEFAULT_FOODS, TEMPLATES } from "./meals.js";
 
-const APP_VERSION = "2026-11-16 · Pull A v2 · Einarmig · Steak-Vorlage";
+const APP_VERSION = "2026-11-16 · Essen selbst berechnen";
 
 /* =====================================================================
    State
@@ -406,10 +406,14 @@ function foodPasteForm() {
 }
 const altLine = (i) => `${i.name} | ${i.kcal != null ? fmt(i.kcal) : 0} kcal | ${i.protein != null ? fmt(i.protein) : 0} g Protein`;
 function altPreviewHtml(text) {
+  if (!text.trim()) return "Schreib einfach, was du gegessen hast, z. B. „2 Weizen Toast mit Nutella“. Die App rechnet selbst. Mengen: „150 g Skyr“, „1 EL Pesto“, „3 Eier“.";
   const r = parseMealText(text);
-  if (!text.trim()) return "Füge hier den Text ein, den du von mir bekommen hast.";
-  if (!r) return "Noch nichts erkannt. Jede Zeile braucht kcal und Protein, z. B. Steak (80 g) | 190 kcal | 22 g Protein";
-  return `Erkannt: <b style="color:var(--ink)">${esc(r.name)}</b> · ${fmt(r.kcal)} kcal · ${fmt(r.protein)} g Protein`;
+  if (!r) return "Noch nichts erkannt. Schreib z. B. „2 Toast mit Nutella“ oder mit Werten: Steak (80 g) | 190 kcal | 22 g Protein";
+  const calc = r.items.filter((i) => i.calc);
+  let h = r.items.length ? `<b style="color:var(--ink)">${fmt(r.kcal)} kcal · ${fmt(r.protein)} g Protein</b>` : "";
+  if (calc.length) h += `<br>` + calc.map((i) => `${esc(i.name)}: ${fmt(i.kcal)} kcal · ${fmt(i.protein)} g`).join("<br>");
+  if (r.unknown && r.unknown.length) h += `<br><span style="color:var(--warn)">Nicht erkannt: ${r.unknown.map(esc).join(", ")}. Mit Werten schreiben, z. B. „${esc(r.unknown[0])} | 250 kcal | 8 g Protein“.</span>`;
+  return h;
 }
 function mealSheet(f) {
   const date = S.ui.foodDate || dateStr();
@@ -419,13 +423,13 @@ function mealSheet(f) {
   showSheet({
     title: f.name, message: plan ? `Geplant: ${plan}` : "",
     html: `<div class="form"><div style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2)">Oder etwas anderes gegessen?</div>
-      <textarea id="altText" aria-label="Text mit Nährwerten einfügen" placeholder="Text aus dem Chat einfügen, z. B.&#10;Steak (80 g) | 190 kcal | 22 g Protein&#10;Curly Fries (150 g) | 240 kcal | 3 g Protein">${esc(text)}</textarea>
+      <textarea id="altText" aria-label="Text mit Nährwerten einfügen" placeholder="Einfach schreiben, z. B.&#10;2 Weizen Toast mit Nutella&#10;150 g Skyr + 1 Banane&#10;Oder mit Werten: Steak | 190 kcal | 22 g Protein">${esc(text)}</textarea>
       <div class="tags" style="margin:0">${TEMPLATES.map((t, i) => `<button class="gbtn glass" style="height:36px;font-size:13px" data-a="altTpl" data-i="${i}">${esc(t.name)}</button>`).join("")}</div>
       <div id="altPreview" class="imgnote" style="margin:0">${altPreviewHtml(text)}</div></div>`,
     actions: [
       { label: "Statt der Mahlzeit übernehmen", style: "primary", form: true, onClick: () => {
         const txt = document.getElementById("altText").value, r = parseMealText(txt);
-        if (!r) { toast("Nichts erkannt. Jede Zeile braucht kcal und Protein."); return false; }
+        if (!r || !r.items.length) { toast("Nichts erkannt. Schreib z. B. „2 Toast mit Nutella“."); return false; }
         setAlt(date, f.id, { name: r.name, kcal: r.kcal, protein: r.protein, items: r.items, text: txt });
         toast("Übernommen");
       } },
