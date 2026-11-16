@@ -235,12 +235,15 @@ export function weekOfMonth(w) {
 export function foodDay(foods, log, date) {
   const entries = log.filter((l) => l.date === date);
   const list = foods.filter((f) => dateStr(new Date(f.createdAt || 0)) <= date);
-  const por = (f) => { const e = entries.find((l) => l.foodId === f.id); return e ? e.portion : 0; };
+  const ent = (f) => entries.find((l) => l.foodId === f.id);
+  const por = (f) => { const e = ent(f); return e ? e.portion : 0; };
+  // Hat Till statt der geplanten Mahlzeit etwas anderes gegessen (alt), zählen dessen Nährwerte.
+  const val = (f, k) => { const e = ent(f); return ((e && e.alt && e.alt[k] != null ? e.alt[k] : f[k]) || 0); };
   const eaten = sum(list.map(por));
   return {
     date, n: list.length, eaten, tracked: entries.length > 0,
     ratio: list.length ? eaten / list.length : null,
-    kcal: sum(list.map((f) => (f.kcal || 0) * por(f))), protein: sum(list.map((f) => (f.protein || 0) * por(f))),
+    kcal: sum(list.map((f) => val(f, "kcal") * por(f))), protein: sum(list.map((f) => val(f, "protein") * por(f))),
     planKcal: sum(list.map((f) => f.kcal || 0)), planProtein: sum(list.map((f) => f.protein || 0)),
   };
 }
@@ -248,4 +251,28 @@ export function foodWeek(foods, log, w) {
   const days = Array.from({ length: 7 }, (_, i) => foodDay(foods, log, addDays(w, i)));
   const tr = days.filter((d) => d.tracked && d.ratio != null);
   return { days, tracked: tr.length, avg: tr.length ? sum(tr.map((d) => d.ratio)) / tr.length : null, protein: tr.length ? sum(tr.map((d) => d.protein)) / tr.length : null, kcal: tr.length ? sum(tr.map((d) => d.kcal)) / tr.length : null };
+}
+
+/* ---------- Text aus dem Chat → Nährwerte ---------- */
+// Erwartetes Format, eine Zeile pro Bestandteil:  Steak (80 g) | 190 kcal | 22 g Protein
+// Auch erkannt: "Name; 190; 22", "Protein 22 g", "Eiweiß". Eine Zeile "Summe | … kcal | … g Protein" ersetzt die Addition.
+export function parseMealText(text) {
+  const n = (x) => { const v = parseFloat(String(x).replace(",", ".")); return Number.isFinite(v) ? v : null; };
+  const lines = String(text || "").split(/\n+/).map((l) => l.replace(/^[\s\-•*]+/, "").trim()).filter(Boolean);
+  const items = []; let total = null;
+  for (const line of lines) {
+    const parts = line.split(/\s*[|;]\s*/);
+    const name = parts[0].replace(/[:：]\s*$/, "").trim();
+    const rest = parts.length > 1 ? parts.slice(1).join(" | ") : line;
+    let kcal = null, protein = null, m;
+    if ((m = rest.match(/(\d+(?:[.,]\d+)?)\s*(?:kcal|kalorien)/i))) kcal = n(m[1]);
+    if ((m = rest.match(/(\d+(?:[.,]\d+)?)\s*g?\s*(?:protein|eiweiß|eiweiss)/i) || rest.match(/(?:protein|eiweiß|eiweiss)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i))) protein = n(m[1]);
+    if (kcal == null && protein == null && parts.length >= 3) { kcal = n(parts[1]); protein = n(parts[2]); }
+    if (kcal == null && protein == null) continue;
+    if (/^(summe|gesamt|total)/i.test(name)) total = { kcal, protein };
+    else items.push({ name, kcal, protein });
+  }
+  if (!items.length && !total) return null;
+  const t = total || { kcal: sum(items.map((i) => i.kcal || 0)), protein: sum(items.map((i) => i.protein || 0)) };
+  return { name: items.map((i) => i.name).join(" + ") || "Andere Mahlzeit", kcal: Math.round(t.kcal || 0), protein: Math.round((t.protein || 0) * 10) / 10, items };
 }

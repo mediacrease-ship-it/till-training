@@ -4,7 +4,7 @@ import {
   dateStr, addDays, weekStart, fmt, fmt1, fmtDate, fmtShort, fmtDM, weekRange, weekOfMonth, parseNum, fmtPct, pct, repRange, uid,
   fmtDuration, setText, newSession, exStats, historyFor, lastTime, hintFor, splitStaleDrafts, finalizeSession,
   dayProgress, exerciseState, sessionTotals, weeklyOverview, exerciseWeekly, bodyWeekly, doneSessions, improved, sum,
-  foodDay, foodWeek, parseDate,
+  foodDay, foodWeek, parseDate, parseMealText,
 } from "./logic.js";
 import { lineChart, barChart, sparkline } from "./charts.js";
 import { art } from "./art.js";
@@ -319,13 +319,15 @@ function viewFood() {
     const items = foods.filter((f) => f.meal === meal);
     if (!items.length) continue;
     h += `<div class="section-h">${esc(meal)}</div><div class="fcard">` + items.map((f) => {
-      const p = portionOf(date, f.id);
-      const sub = [f.kcal ? `${fmt(f.kcal)} kcal` : "", f.protein ? `${fmt(f.protein)} g Protein` : ""].filter(Boolean).join(" · ");
-      const act = S.ui.foodEdit ? `data-a="foodEdit" data-id="${f.id}"` : `data-a="foodToggle" data-id="${f.id}"`;
+      const p = portionOf(date, f.id), le = S.foodlog.find((l) => l.date === date && l.foodId === f.id), alt = le && le.alt;
+      const nut = (k, pr) => [k ? `${fmt(k)} kcal` : "", pr ? `${fmt(pr)} g Protein` : ""].filter(Boolean).join(" · ");
+      const title = alt ? alt.name : f.name;
+      const sub = alt ? `statt ${f.name} · ${nut(alt.kcal, alt.protein)}` : nut(f.kcal, f.protein);
+      const act = S.ui.foodEdit ? `data-a="foodEdit" data-id="${f.id}"` : `data-a="foodOpen" data-id="${f.id}"`;
       return `<div class="frow">${S.ui.foodEdit ? `<button class="minus" data-a="foodDel" data-id="${f.id}" aria-label="${esc(f.name)} entfernen"></button>` :
-        `<button class="fcheck ${p === 1 ? "full" : p === 0.5 ? "half" : ""}" ${act} aria-pressed="${p > 0}" aria-label="${esc(f.name)} ${p === 1 ? "als nicht gegessen markieren" : "als gegessen markieren"}">${p === 1 ? ICON.check : ""}</button>`}
-        <div class="grow" ${act} style="cursor:pointer"><div class="t">${esc(f.name)}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div>
-        ${S.ui.foodEdit ? ICON.chev : `<button class="half-btn ${p === 0.5 ? "on" : ""}" data-a="foodHalf" data-id="${f.id}" aria-label="${esc(f.name)} zur Hälfte gegessen">½</button>`}</div>`;
+        `<button class="fcheck ${p === 1 ? "full" : p === 0.5 ? "half" : ""}" data-a="foodToggle" data-id="${f.id}" aria-pressed="${p > 0}" aria-label="${esc(title)} ${p === 1 ? "als nicht gegessen markieren" : "als gegessen markieren"}">${p === 1 ? ICON.check : ""}</button>`}
+        <div class="grow" ${act} role="button" tabindex="0" style="cursor:pointer"><div class="t">${esc(title)}${alt ? ' <span class="pill acc" style="margin-left:4px">anderes</span>' : ""}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div>
+        ${S.ui.foodEdit ? ICON.chev : `<button class="half-btn ${p === 0.5 ? "on" : ""}" data-a="foodHalf" data-id="${f.id}" aria-label="${esc(title)} zur Hälfte gegessen">½</button>`}</div>`;
     }).join("") + `</div>`;
   }
   h += `<div class="addrow" style="margin-top:20px"><button class="btn secondary small" data-a="foodAdd">+ Hinzufügen</button><button class="btn secondary small" data-a="foodPaste">Liste einfügen</button></div>
@@ -380,6 +382,42 @@ function foodPasteForm() {
       toast(`${lines.length} hinzugefügt`); render({ keepScroll: true });
     } }, { label: "Abbrechen" }],
   });
+}
+const altLine = (i) => `${i.name} | ${i.kcal != null ? fmt(i.kcal) : 0} kcal | ${i.protein != null ? fmt(i.protein) : 0} g Protein`;
+function altPreviewHtml(text) {
+  const r = parseMealText(text);
+  if (!text.trim()) return "Füge hier den Text ein, den du von mir bekommen hast.";
+  if (!r) return "Noch nichts erkannt. Jede Zeile braucht kcal und Protein, z. B. Steak (80 g) | 190 kcal | 22 g Protein";
+  return `Erkannt: <b style="color:var(--ink)">${esc(r.name)}</b> · ${fmt(r.kcal)} kcal · ${fmt(r.protein)} g Protein`;
+}
+function mealSheet(f) {
+  const date = S.ui.foodDate || dateStr();
+  const e = S.foodlog.find((l) => l.date === date && l.foodId === f.id), alt = e && e.alt, p = portionOf(date, f.id);
+  const plan = [f.kcal ? `${fmt(f.kcal)} kcal` : "", f.protein ? `${fmt(f.protein)} g Protein` : ""].filter(Boolean).join(" · ");
+  const text = alt ? (alt.text || (alt.items || []).map(altLine).join("\n")) : "";
+  showSheet({
+    title: f.name, message: plan ? `Geplant: ${plan}` : "",
+    html: `<div class="form"><div style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2)">Oder etwas anderes gegessen?</div>
+      <textarea id="altText" aria-label="Text mit Nährwerten einfügen" placeholder="Text aus dem Chat einfügen, z. B.&#10;Steak (80 g) | 190 kcal | 22 g Protein&#10;Curly Fries (150 g) | 240 kcal | 3 g Protein">${esc(text)}</textarea>
+      <div id="altPreview" class="imgnote" style="margin:0">${altPreviewHtml(text)}</div></div>`,
+    actions: [
+      { label: "Statt der Mahlzeit übernehmen", style: "primary", form: true, onClick: () => {
+        const txt = document.getElementById("altText").value, r = parseMealText(txt);
+        if (!r) { toast("Nichts erkannt. Jede Zeile braucht kcal und Protein."); return false; }
+        setAlt(date, f.id, { name: r.name, kcal: r.kcal, protein: r.protein, items: r.items, text: txt });
+        toast("Übernommen");
+      } },
+      { label: p === 1 ? "Als nicht gegessen markieren" : "Als gegessen markieren", onClick: () => setPortion(date, f.id, p === 1 ? 0 : 1) },
+      ...(alt ? [{ label: "Zurück zur geplanten Mahlzeit", style: "destructive", onClick: () => setAlt(date, f.id, null) }] : []),
+      { label: "Schließen" },
+    ],
+  });
+}
+function setAlt(date, foodId, alt) {
+  let e = S.foodlog.find((l) => l.date === date && l.foodId === foodId);
+  if (!e) { e = { id: `${date}_${foodId}`, date, foodId, portion: 0, createdAt: Date.now() }; S.foodlog.push(e); }
+  if (alt) { e.alt = alt; if (e.portion === 0) e.portion = 1; } else delete e.alt;
+  DB.put("foodlog", e); render({ keepScroll: true });
 }
 function setPortion(date, foodId, portion) {
   let e = S.foodlog.find((l) => l.date === date && l.foodId === foodId);
@@ -820,6 +858,7 @@ const A = {
   },
   foodToggle(t) { const date = S.ui.foodDate || dateStr(); setPortion(date, t.dataset.id, portionOf(date, t.dataset.id) === 1 ? 0 : 1); },
   foodHalf(t) { const date = S.ui.foodDate || dateStr(); setPortion(date, t.dataset.id, portionOf(date, t.dataset.id) === 0.5 ? 0 : 0.5); },
+  foodOpen(t) { const f = S.foods.find((x) => x.id === t.dataset.id); if (f) mealSheet(f); },
   foodAdd() { foodForm(null); },
   foodPaste() { foodPasteForm(); },
   foodEditToggle() { S.ui.foodEdit = !S.ui.foodEdit; render({ keepScroll: true }); },
@@ -864,6 +903,7 @@ document.addEventListener("click", (e) => {
 
 document.addEventListener("input", (e) => {
   const t = e.target;
+  if (t.id === "altText") { document.getElementById("altPreview").innerHTML = altPreviewHtml(t.value); return; }
   if (t.id === "search") { S.ui.search = t.value; document.getElementById("exlist").innerHTML = exListHtml(); return; }
   if (!t.classList || !t.classList.contains("num")) return;
   const c = ctx(); if (!c || !c.sx) return;
