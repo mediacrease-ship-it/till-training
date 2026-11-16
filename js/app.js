@@ -12,7 +12,7 @@ import { altsFor } from "./alternatives.js";
 import { imgUrls } from "./images.js";
 import { DEFAULT_FOODS, TEMPLATES } from "./meals.js";
 
-const APP_VERSION = "2026-11-16 · Pull A v2 · Einarmig";
+const APP_VERSION = "2026-11-16 · Pull A v2 · Einarmig · Steak-Vorlage";
 
 /* =====================================================================
    State

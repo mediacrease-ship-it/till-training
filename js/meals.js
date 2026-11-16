@@ -17,5 +17,6 @@ export const TEMPLATES = [
   { name: "All-in-One-Milkshake", text: "Vollmilch 3,5 % (350 ml) | 228 kcal | 12 g Protein\nProteinpulver (30 g) | 112 kcal | 22 g Protein\nErdnussbutter (1 EL, 20 g) | 120 kcal | 5 g Protein" },
   { name: "2 Toast mit Erdnussbutter + Banane", text: "Toastbrot (2 Scheiben) | 160 kcal | 5 g Protein\nErdnussbutter (30 g) | 180 kcal | 8 g Protein\nBanane (1 mittelgroß) | 105 kcal | 1 g Protein" },
   { name: "Skyr-Bowl mit Beeren", text: "Skyr (250 g) | 155 kcal | 28 g Protein\nProteinpulver (15 g) | 56 kcal | 11 g Protein\nSpekulatius (2 Stück) | 96 kcal | 1 g Protein\nBeeren (80 g) | 40 kcal | 1 g Protein" },
+  { name: "Steak, Spaghetti, Pesto", text: "Rinderrumpsteak (249 g roh, Lidl Bio) | 321 kcal | 52,3 g Protein\nSpaghetti (100 g trocken) | 355 kcal | 12,5 g Protein\nGrünes Pesto (1 EL, ca. 15 g) | 75 kcal | 1 g Protein" },
   { name: "Banane", text: "Banane (1 mittelgroß) | 105 kcal | 1 g Protein" },
 ];
