@@ -1,5 +1,5 @@
 // Offline-Cache: App-Shell wird vorab gecacht, danach "stale-while-revalidate".
-const CACHE = "gym-tracker-v6";
+const CACHE = "gym-tracker-v7";
 const SHELL = ["./", "index.html", "css/app.css", "js/app.js", "js/db.js", "js/logic.js", "js/plan.js", "js/charts.js", "js/art.js", "js/images.js", "js/meals.js", "js/alternatives.js", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {

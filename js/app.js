@@ -12,7 +12,7 @@ import { altsFor } from "./alternatives.js";
 import { imgUrls } from "./images.js";
 import { DEFAULT_FOODS, TEMPLATES } from "./meals.js";
 
-const APP_VERSION = "2026-11-16 · Mahlzeiten v1 · Plan-Editor";
+const APP_VERSION = "2026-11-16 · Einarmig-Modus";
 
 /* =====================================================================
    State
@@ -248,6 +248,7 @@ function viewExercise(dayId, i) {
   const right = sx.kind === "sets" ? `<button class="gbtn glass" data-a="toggleEdit">${S.ui.edit ? "Fertig" : "Bearbeiten"}</button>` : "";
   const work = sx.sets.filter((s) => s.type === "work");
   const hasAlts = altsFor(sx.origKey || sx.key).length > 0;
+  if (sx.kind === "sets" && sx.uni === undefined) sx.uni = !!(lt && lt.ex.uni);
 
   let h = navbar({ back: `#/day/${dayId}`, backLabel: day.name, title: sx.name, right }) + `<h1 class="large">${esc(sx.name)}</h1>
     <p class="exmeta">${sx.kind === "sets" ? `${work.length} × ${esc(px.reps)}` : esc(px.reps)}${px.restLabel ? ` · Pause ${esc(px.restLabel)}` : ""}${px.optional ? " · optional" : ""}</p>`;
@@ -261,7 +262,9 @@ function viewExercise(dayId, i) {
   if (hero.cls === "imgs") h += `<div class="imgnote">Start- und Endposition als Beispiel. Deine Maschine kann anders aussehen: mit der Kamera ein eigenes Foto machen.</div>`;
 
   h += `<div class="pillrow">${px.note ? `<button class="gbtn glass" data-a="toggleNote" aria-expanded="${S.ui.note}">Hinweis</button>` : ""}
-    ${hasAlts || sx.origKey ? `<button class="gbtn glass" data-a="showAlts" data-i="${i}">Alternative anzeigen</button>` : ""}</div>`;
+    ${hasAlts || sx.origKey ? `<button class="gbtn glass" data-a="showAlts" data-i="${i}">Alternative anzeigen</button>` : ""}
+    ${sx.kind === "sets" ? `<button class="gbtn glass ${sx.uni ? "on" : ""}" data-a="toggleUni" aria-pressed="${!!sx.uni}">${sx.uni ? "Einarmig ✓" : "Einarmig"}</button>` : ""}</div>`;
+  if (sx.kind === "sets" && sx.uni) h += `<div class="note">Einarmig: erst rechts, dann links eintragen. Das Gewicht ist pro Arm. In der Auswertung zählt die schwächere Seite.</div>`;
   if (sx.origKey) h += `<div class="note" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span>Alternative zu <b style="color:var(--ink)">${esc(sx.origName)}</b></span><button class="gbtn glass" data-a="unswap" data-i="${i}">Original</button></div>`;
   if (px.note && S.ui.note) h += `<div class="note">${esc(px.note)}</div>`;
 
@@ -282,14 +285,23 @@ function viewExercise(dayId, i) {
       const phReps = ref && ref.reps != null ? ref.reps : null;
       const rangeTxt = rr.min === rr.max ? `${rr.max}` : `${rr.min}–${rr.max}`;
       const prevTxt = ref ? (ref.kg > 0 ? `${fmt(ref.kg)}×${ref.reps ?? "–"}` : `${ref.reps ?? "–"} Wdh.`) : "–";
+      const uni = !!sx.uni;
+      const phReL = ref && ref.repsL != null ? ref.repsL : null, phKgL = ref && ref.kgL != null ? ref.kgL : (s.kg != null ? s.kg : phKg);
+      const prevL = ref && ref.repsL != null ? ((ref.kgL > 0 ? ref.kgL : ref.kg) > 0 ? `${fmt(ref.kgL > 0 ? ref.kgL : ref.kg)}×${ref.repsL}` : `${ref.repsL} Wdh.`) : "–";
       if (isWarm && n === 1) h += `<div class="subhead">Aufwärmen</div>`;
       if (!isWarm && n === 1) h += `<div class="subhead">${nWarm ? "Arbeitssätze" : "Sätze"}</div>`;
-      h += `<div class="setrow ${s.done ? "done" : ""}" data-id="${s.id}" data-phkg="${phKg ?? ""}" data-phreps="${phReps ?? ""}">
-        ${S.ui.edit ? `<button class="minus" data-a="delSet" data-id="${s.id}" aria-label="Satz entfernen"></button>` : `<div class="slabel ${isWarm ? "warm" : ""}">${n}</div>`}
+      h += `<div class="setrow ${s.done ? "done" : ""} ${uni ? "uni" : ""}" data-id="${s.id}" data-phkg="${phKg ?? ""}" data-phreps="${phReps ?? ""}" data-phrepsl="${phReL ?? ""}">
+        ${S.ui.edit ? `<button class="minus" data-a="delSet" data-id="${s.id}" aria-label="Satz entfernen"></button>` : `<div class="slabel ${isWarm ? "warm" : ""}">${n}${uni ? "<small>R</small>" : ""}</div>`}
         <div class="prev">${prevTxt}</div>
-        <input class="num" data-f="kg" data-id="${s.id}" inputmode="decimal" autocomplete="off" enterkeyhint="next" aria-label="Gewicht in kg, ${isWarm ? "Aufwärmsatz" : "Satz"} ${n}" placeholder="${phKg != null ? fmt(phKg) : "kg"}" value="${s.kg != null ? fmt(s.kg) : ""}">
-        <input class="num" data-f="reps" data-id="${s.id}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" aria-label="Wiederholungen, ${isWarm ? "Aufwärmsatz" : "Satz"} ${n}" placeholder="${phReps != null ? phReps : isWarm ? "Wdh." : rangeTxt}" value="${s.reps != null ? s.reps : ""}">
+        <input class="num" data-f="kg" data-id="${s.id}" inputmode="decimal" autocomplete="off" enterkeyhint="next" aria-label="Gewicht in kg${uni ? " rechts" : ""}, ${isWarm ? "Aufwärmsatz" : "Satz"} ${n}" placeholder="${phKg != null ? fmt(phKg) : "kg"}" value="${s.kg != null ? fmt(s.kg) : ""}">
+        <input class="num" data-f="reps" data-id="${s.id}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="${uni ? "next" : "done"}" aria-label="Wiederholungen${uni ? " rechts" : ""}, ${isWarm ? "Aufwärmsatz" : "Satz"} ${n}" placeholder="${phReps != null ? phReps : isWarm ? "Wdh." : rangeTxt}" value="${s.reps != null ? s.reps : ""}">
         <button class="check" data-a="toggleSet" data-id="${s.id}" aria-pressed="${s.done}" aria-label="${isWarm ? "Aufwärmsatz" : "Satz"} ${n} ${s.done ? "zurücknehmen" : "abhaken"}">${ICON.check}</button></div>`;
+      if (uni) h += `<div class="setrow sub ${s.done ? "done" : ""} uni" data-id="${s.id}">
+        <div class="slabel side">L</div>
+        <div class="prev">${prevL}</div>
+        <input class="num" data-f="kgL" data-id="${s.id}" inputmode="decimal" autocomplete="off" enterkeyhint="next" aria-label="Gewicht in kg links, Satz ${n}" placeholder="${phKgL != null ? fmt(phKgL) : "kg"}" value="${s.kgL != null ? fmt(s.kgL) : ""}">
+        <input class="num" data-f="repsL" data-id="${s.id}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" aria-label="Wiederholungen links, Satz ${n}" placeholder="${phReL != null ? phReL : isWarm ? "Wdh." : rangeTxt}" value="${s.repsL != null ? s.repsL : ""}">
+        <span></span></div>`;
     });
     h += `</div><div class="addrow"><button class="btn secondary small" data-a="addSet" data-type="warm">+ Aufwärmsatz</button><button class="btn secondary small" data-a="addSet" data-type="work">+ Satz</button></div>`;
   }
@@ -803,13 +815,27 @@ const A = {
       if (s.reps == null && phReps != null) s.reps = phReps;
       if (s.type === "work" && !(s.reps > 0)) {
         const inp = row.querySelector('[data-f="reps"]'); inp.classList.add("shake"); inp.focus();
-        setTimeout(() => inp.classList.remove("shake"), 350); toast("Bitte Wiederholungen eintragen"); return;
+        setTimeout(() => inp.classList.remove("shake"), 350); toast(c.sx.uni ? "Bitte Wiederholungen rechts eintragen" : "Bitte Wiederholungen eintragen"); return;
+      }
+      if (c.sx.uni) {
+        const phL = parseNum(row.dataset.phrepsl);
+        if (s.kgL == null) s.kgL = s.kg;
+        if (s.repsL == null && phL != null) s.repsL = phL;
+        if (s.type === "work" && !(s.repsL > 0)) {
+          const inp = row.nextElementSibling && row.nextElementSibling.querySelector('[data-f="repsL"]');
+          if (inp) { inp.classList.add("shake"); inp.focus(); setTimeout(() => inp.classList.remove("shake"), 350); }
+          toast("Bitte Wiederholungen links eintragen"); return;
+        }
       }
       s.done = true;
       const rest = c.px ? c.px.restSec : 0;
       startTimer(s.type === "warm" ? Math.min(rest, 60) : rest, c.sx.name);
     } else s.done = false;
     saveSession(c.dr); render({ keepScroll: true });
+  },
+  toggleUni() {
+    const c = ctx(); if (!c || !c.sx) return;
+    c.sx.uni = !c.sx.uni; saveSession(c.dr); render({ keepScroll: true });
   },
   toggleCheck(t) {
     const c = ctx(); if (!c || !c.dr) return;
@@ -965,13 +991,15 @@ document.addEventListener("input", (e) => {
   const c = ctx(); if (!c || !c.sx) return;
   const s = c.sx.sets.find((x) => x.id === t.dataset.id); if (!s) return;
   const v = parseNum(t.value);
-  s[t.dataset.f] = v == null ? null : t.dataset.f === "reps" ? Math.round(v) : v;
+  s[t.dataset.f] = v == null ? null : /^reps/.test(t.dataset.f) ? Math.round(v) : v;
   saveSession(c.dr);
 });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" || !e.target.classList || !e.target.classList.contains("num")) return;
   e.preventDefault();
-  const next = e.target.dataset.f === "kg" ? e.target.closest(".setrow").querySelector('[data-f="reps"]') : null;
+  const f = e.target.dataset.f;
+  const next = f === "kg" ? e.target.closest(".setrow").querySelector('[data-f="reps"]') : f === "kgL" ? e.target.closest(".setrow").querySelector('[data-f="repsL"]')
+    : f === "reps" && e.target.closest(".setrow").nextElementSibling && e.target.closest(".setrow").nextElementSibling.classList.contains("sub") ? e.target.closest(".setrow").nextElementSibling.querySelector('[data-f="repsL"]') : null;
   if (next) next.focus(); else e.target.blur();
 });
 document.addEventListener("focusin", (e) => { if (e.target.classList && e.target.classList.contains("num")) e.target.select(); });

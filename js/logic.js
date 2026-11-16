@@ -41,7 +41,12 @@ export function fmtDuration(sec) {
   const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
   return `${m}:${pad(s)}`;
 }
+// Einarmige Übungen: rechts = kg/reps, links = kgL/repsL. Für Auswertung zählt die schwächere Seite.
+export const sk = (s) => (s.kg > 0 && s.kgL > 0 ? Math.min(s.kg, s.kgL) : s.kg);
+export const sr = (s) => (s.reps > 0 && s.repsL > 0 ? Math.min(s.reps, s.repsL) : s.reps);
+const one = (kg, reps) => (kg > 0 ? `${fmt(kg)}×${reps ?? "–"}` : `${reps ?? "–"} Wdh.`);
 export function setText(s) {
+  if (s.repsL > 0) return `${one(s.kg, s.reps)} R · ${one(s.kgL > 0 ? s.kgL : s.kg, s.repsL)} L`;
   if (s.kg > 0) return `${fmt(s.kg)} × ${s.reps}`;
   return `${s.reps} Wdh.`;
 }
@@ -69,15 +74,15 @@ export function newSession(day) {
   };
 }
 
-export const workDone = (ex) => ex.sets.filter((s) => s.type === "work" && s.done && s.reps > 0);
+export const workDone = (ex) => ex.sets.filter((s) => s.type === "work" && s.done && sr(s) > 0);
 
 export function exStats(ex) {
   const w = workDone(ex);
   if (!w.length) return null;
-  const maxKg = Math.max(...w.map((s) => s.kg || 0));
-  const totalReps = sum(w.map((s) => s.reps));
-  const volume = sum(w.map((s) => (s.kg || 0) * s.reps));
-  const e1rm = Math.max(...w.map((s) => (s.kg || 0) * (1 + s.reps / 30)));
+  const maxKg = Math.max(...w.map((s) => sk(s) || 0));
+  const totalReps = sum(w.map((s) => sr(s)));
+  const volume = sum(w.map((s) => (sk(s) || 0) * sr(s)));
+  const e1rm = Math.max(...w.map((s) => (sk(s) || 0) * (1 + sr(s) / 30)));
   return { sets: w, maxKg, totalReps, volume, e1rm, score: maxKg > 0 ? e1rm : totalReps, unit: maxKg > 0 ? "kg" : "Wdh." };
 }
 
@@ -110,9 +115,9 @@ export function hintFor(hist, repMax, draftEx) {
   if (!hist.length) return null;
   const last = hist[hist.length - 1];
   const w = last.st.sets;
-  if (repMax && w.length >= 2 && w.every((s) => s.reps >= repMax)) {
+  if (repMax && w.length >= 2 && w.every((s) => sr(s) >= repMax)) {
     // schon erledigt, wenn im aktuellen Training bereits mehr Gewicht eingetragen wurde
-    const already = draftEx && draftEx.sets.some((s) => s.type === "work" && s.kg > last.st.maxKg);
+    const already = draftEx && draftEx.sets.some((s) => s.type === "work" && sk(s) > last.st.maxKg);
     if (!already) {
       return last.st.maxKg > 0
         ? { type: "increase", short: "Gewicht erhöhen", text: `Letztes Mal alle Sätze bei ${repMax} Wdh. oder mehr. Heute Gewicht erhöhen (zuletzt ${fmt(last.st.maxKg)} kg).` }
@@ -171,7 +176,7 @@ export function exerciseState(sx) {
 /* ---------- Auswertung ---------- */
 export function sessionTotals(s) {
   let sets = 0, volume = 0;
-  for (const e of s.exercises) for (const x of e.sets) if (x.type === "work" && x.done && x.reps > 0) { sets++; volume += (x.kg || 0) * x.reps; }
+  for (const e of s.exercises) for (const x of e.sets) if (x.type === "work" && x.done && sr(x) > 0) { sets++; volume += (sk(x) || 0) * sr(x); }
   return { sets, volume };
 }
 
@@ -200,7 +205,7 @@ export function exerciseWeekly(sessions) {
       let p = e.pts.find((x) => x.week === w);
       if (!p) { p = { week: w, score: 0 }; e.pts.push(p); }
       if (st.score >= p.score) {
-        const top = st.sets.reduce((a, b) => ((b.kg || 0) > (a.kg || 0) || ((b.kg || 0) === (a.kg || 0) && b.reps > a.reps) ? b : a));
+        const top = st.sets.reduce((a, b) => ((sk(b) || 0) > (sk(a) || 0) || ((sk(b) || 0) === (sk(a) || 0) && sr(b) > sr(a)) ? b : a));
         Object.assign(p, { score: st.score, unit: st.unit, top });
       }
       map.set(ex.key, e);
