@@ -49,18 +49,22 @@ export function setText(s) {
 /* ---------- Sessions ---------- */
 const mkSet = (type) => ({ id: uid(), type, kg: null, reps: null, done: false });
 
+export function newSessionExercise(ex) {
+  return {
+    exId: ex.id, key: ex.key, name: ex.name, kind: ex.kind, checked: false,
+    sets: ex.kind === "check" ? [] : [
+      ...Array.from({ length: ex.warmupSets }, () => mkSet("warm")),
+      ...Array.from({ length: ex.workSets }, () => mkSet("work")),
+    ],
+  };
+}
+
 export function newSession(day) {
   const now = Date.now();
   return {
     id: uid(), dayId: day.id, dayName: day.name, date: dateStr(), status: "draft",
     startedAt: now, finishedAt: null, shoulder: null,
-    exercises: day.exercises.map((ex) => ({
-      exId: ex.id, key: ex.key, name: ex.name, kind: ex.kind, checked: false,
-      sets: ex.kind === "check" ? [] : [
-        ...Array.from({ length: ex.warmupSets }, () => mkSet("warm")),
-        ...Array.from({ length: ex.workSets }, () => mkSet("work")),
-      ],
-    })),
+    exercises: day.exercises.map(newSessionExercise),
     createdAt: now, updatedAt: now,
   };
 }

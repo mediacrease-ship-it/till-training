@@ -1,7 +1,7 @@
 // Fest hinterlegter Trainingsplan (aus "Tills Trainingsplan.html" übernommen).
 // Wird beim ersten Start in IndexedDB geschrieben und ist dort später editierbar.
 // Wenn du hier etwas änderst: PLAN_VERSION erhöhen, dann wird der Plan neu eingespielt.
-export const PLAN_VERSION = 2;
+export const PLAN_VERSION = 3;
 
 // Standard laut Till: 1 Aufwärmsatz + 3 Arbeitssätze pro Übung.
 const DEFAULT_WARM = 1;
@@ -14,17 +14,18 @@ const WARMUP_PUSH = "Armkreisen 10 · Band Pull-Aparts 15 · Außenrotation am K
 const RAW = {
   "pull-a": {
     name: "Pull A", short: "Mo", label: "Montag", weekday: 1, kind: "pull",
-    focus: "Bizeps · Rücken breit", std: true,
+    focus: "Rücken · Bizeps", std: false,
+    note: "Ca. 1 Stunde. Aufwärmsatz nur bei den ersten Übungen je Muskel, die anderen sind dann schon warm (mit + Aufwärmsatz jederzeit ergänzbar).",
     ex: [
       ["Schulter-Warm-up", 0, 1, "5 Min", "", WARMUP_PULL],
-      ["Bizepscurl Maschine / Scott", 2, 3, "8–12", "90 s", "Bizeps zuerst, solange er frisch ist. Arm fixiert, kein Schwung.", 0, 1],
-      ["Hammercurls Kurzhantel", 0, 2, "10–12", "90 s", "Bizeps-Unterbau + Unterarm. 1 Wdh. im Tank."],
+      ["Bizepscurl Maschine / Scott", 1, 3, "8–12", "90 s", "Bizeps zuerst, solange er frisch ist. Arm fixiert, kein Schwung.", 0, 1],
+      ["Hammercurls Kurzhantel", 0, 3, "10–12", "90 s", "Bizeps-Unterbau + Unterarm. 1 Wdh. im Tank."],
       ["Latzug, schulterbreit", 1, 3, "8–12", "2–3 Min", "Breite. Bizeps ist schon müde: Gewicht anfangs etwas niedriger. Nicht ganz breit greifen. 1–2 Wdh. im Tank."],
       ["Rudern Maschine, Brust aufgelegt", 1, 3, "8–12", "2 Min", "Rücken-Dicke, kaum Pressen. 1–2 Wdh. im Tank."],
-      ["Überzüge am Kabel", 0, 2, "12–15", "90 s", "Lat isoliert, ohne Bizeps. Gleicht den müden Bizeps aus.", 0, 1],
-      ["Reverse Butterfly", 0, 2, "12–15", "90 s", "Hintere Schulter.", 0, 1],
-      ["Handgelenk-Curls", 0, 2, "15–20", "60 s", "Unterarm. Sitzend, Handflächen oben.", 0, 1],
-      ["Beinbeuger sitzend", 0, 2, "12–15", "60 s", "Leicht, ruhig atmen. Bei Druckgefühl abbrechen.", 1],
+      ["Einarmiger Latzug am Kabel", 0, 3, "10–12 /Seite", "90 s", "Links nach Gefühl dosieren. 1 Wdh. im Tank."],
+      ["Überzüge am Kabel", 0, 3, "12–15", "90 s", "Lat isoliert, ohne Bizeps. Gleicht den müden Bizeps aus.", 0, 1],
+      ["Bizepscurl am Kabel", 0, 3, "10–12", "60 s", "Zum Schluss, konstante Spannung.", 0, 1],
+      ["Beinbeuger sitzend", 0, 3, "12–15", "60 s", "Leicht, ruhig atmen. Bei Druckgefühl abbrechen.", 1],
     ],
   },
   "push-a": {

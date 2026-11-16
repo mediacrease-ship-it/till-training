@@ -2,7 +2,7 @@ import { buildDefaultPlan, PLAN_VERSION, RULES, slug } from "./plan.js";
 import * as DB from "./db.js";
 import {
   dateStr, addDays, weekStart, fmt, fmt1, fmtDate, fmtShort, fmtDM, weekRange, weekOfMonth, parseNum, fmtPct, pct, repRange, uid,
-  fmtDuration, setText, newSession, exStats, historyFor, lastTime, hintFor, splitStaleDrafts, finalizeSession,
+  fmtDuration, setText, newSession, newSessionExercise, exStats, historyFor, lastTime, hintFor, splitStaleDrafts, finalizeSession,
   dayProgress, exerciseState, sessionTotals, weeklyOverview, exerciseWeekly, bodyWeekly, doneSessions, improved, sum,
   foodDay, foodWeek, parseDate, parseMealText,
 } from "./logic.js";
@@ -12,7 +12,7 @@ import { altsFor } from "./alternatives.js";
 import { imgUrls } from "./images.js";
 import { DEFAULT_FOODS, TEMPLATES } from "./meals.js";
 
-const APP_VERSION = "2026-11-16 · Mahlzeiten v1";
+const APP_VERSION = "2026-11-16 · Mahlzeiten v1 · Plan-Editor";
 
 /* =====================================================================
    State
@@ -21,7 +21,7 @@ const MEALS = ["Frühstück", "Pause", "Mittagessen", "Abendessen", "Nach dem Tr
 const S = {
   plan: [], sessions: [], body: [], foods: [], foodlog: [], photos: {}, photoRec: {},
   settings: { key: "settings", theme: "light", planVersion: 0 },
-  ui: { seg: "ex", search: "", metric: "weight", edit: false, note: false, foodDate: null, foodEdit: false, lastMeal: MEALS[0] },
+  ui: { seg: "ex", search: "", metric: "weight", edit: false, planEdit: false, note: false, foodDate: null, foodEdit: false, lastMeal: MEALS[0] },
 };
 const $app = document.getElementById("app");
 const $tab = document.getElementById("tabbar");
@@ -188,7 +188,7 @@ function viewDay(id) {
   const lastShoulder = [...doneSessions(S.sessions)].reverse().find((s) => s.shoulder != null);
   const date = addDays(weekStart(dateStr()), (day.weekday + 6) % 7);
 
-  let h = navbar({ back: "#/", backLabel: "Plan", title: day.name }) +
+  let h = navbar({ back: "#/", backLabel: "Plan", title: day.name, right: `<button class="gbtn glass" data-a="planEdit">${S.ui.planEdit ? "Fertig" : "Ändern"}</button>` }) +
     `<h1 class="large">${esc(day.name)}</h1><p class="subtitle">${WD[day.weekday]}, ${esc(fmtDate(date, { day: "numeric", month: "long" }))} · ${esc(day.focus)}</p>`;
   if (day.note) h += `<div class="note">${esc(day.note)}</div>`;
   if (lastShoulder && lastShoulder.shoulder >= 3)
@@ -203,6 +203,11 @@ function viewDay(id) {
     const status = `<span class="status ${st}" style="--p:${work.length ? Math.round((dw / work.length) * 100) : 0}%" aria-hidden="true">${st === "done" ? ICON.check : ""}</span>`;
     const th = `<div class="thumb">${thumbOf(sx.name, sx.key)}</div>`;
     const nx = cur && st !== "done" ? `<div class="nx">Als Nächstes</div>` : "";
+    if (S.ui.planEdit) {
+      h += `<div class="xcard"><button class="minus" data-a="exRemove" data-i="${i}" aria-label="${esc(sx.name)} entfernen"></button>${th}<div class="grow"><div class="t">${esc(sx.name)}</div><div class="s">${sx.kind === "check" ? esc(px.reps) : `${px.workSets} × ${esc(px.reps)}`}${px.optional ? " · optional" : ""}</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><button class="gbtn round glass" style="height:34px;width:34px;min-width:34px" data-a="exMove" data-i="${i}" data-d="-1" aria-label="nach oben" ${i === 0 ? "disabled style=\"opacity:.3;height:34px;width:34px;min-width:34px\"" : ""}>▲</button><button class="gbtn round glass" style="height:34px;width:34px;min-width:34px" data-a="exMove" data-i="${i}" data-d="1" aria-label="nach unten" ${i === dr.exercises.length - 1 ? "disabled style=\"opacity:.3;height:34px;width:34px;min-width:34px\"" : ""}>▼</button></div></div>`;
+      return;
+    }
     if (sx.kind === "check") {
       h += `<button class="xcard ${cur ? "current" : ""} ${st}" data-a="toggleCheck" data-i="${i}" aria-pressed="${st === "done"}">${th}<div class="grow">${nx}<div class="t">${esc(sx.name)}</div><div class="s">${esc(px.note || px.reps)}</div></div>${status}</button>`;
       return;
@@ -216,6 +221,7 @@ function viewDay(id) {
       ${hint ? `<div class="hint ${hint.type === "increase" ? "up" : "warn"}">${hint.type === "increase" ? ICON.up : ICON.warn}${esc(hint.short)}</div>` : ""}</div>${status}</a>`;
   });
 
+  if (S.ui.planEdit) return h + `<button class="btn" data-a="exAdd">+ Übung hinzufügen</button><div class="section-f" style="text-align:center">Änderungen gelten für alle kommenden ${esc(day.name)}-Trainings. Bisherige Daten bleiben im Verlauf.</div>`;
   const sh = dr.shoulder;
   h += `<div class="section-h">Schulter links (optional)</div><div class="card"><div class="scale">` +
     Array.from({ length: 11 }, (_, v) => `<button data-a="shoulder" data-v="${v}" class="${sh === v ? "on " + (v >= 6 ? "high" : v >= 3 ? "mid" : "") : ""}" aria-pressed="${sh === v}" aria-label="Schulter ${v} von 10">${v}</button>`).join("") +
@@ -659,7 +665,7 @@ function render({ keepScroll = false } = {}) {
 }
 function onScroll() { const n = document.querySelector(".navbar"); if (n) n.classList.toggle("scrolled", window.scrollY > 36); }
 window.addEventListener("scroll", onScroll, { passive: true });
-window.addEventListener("hashchange", () => { S.ui.edit = false; S.ui.note = false; S.ui.foodEdit = false; render(); });
+window.addEventListener("hashchange", () => { S.ui.planEdit = false; S.ui.edit = false; S.ui.note = false; S.ui.foodEdit = false; render(); });
 
 /* =====================================================================
    Pausen-Timer
@@ -737,10 +743,53 @@ function ctx() {
   return { dayId: b, day, dr, i: c === "ex" ? Number(d) : null, sx: c === "ex" && dr ? dr.exercises[Number(d)] : null, px: c === "ex" && day ? day.exercises[Number(d)] : null };
 }
 
+// Plan geändert: speichern, als „eigene Änderung“ markieren (wird bei App-Updates nicht überschrieben), Entwurf angleichen
+function applyPlanChange(day) {
+  day.customized = true; DB.put("plan", day);
+  const dr = draftOf(day.id);
+  if (dr) { dr.exercises = day.exercises.map((ex) => dr.exercises.find((x) => x.exId === ex.id) || newSessionExercise(ex)); saveSession(dr); }
+  render({ keepScroll: true });
+}
+
 const A = {
   histSeg(t) { S.ui.seg = t.dataset.v; render(); },
   metric(t) { S.ui.metric = t.dataset.v; render({ keepScroll: true }); },
   theme(t) { S.settings.theme = t.dataset.v; applyTheme(); DB.put("meta", S.settings); render({ keepScroll: true }); },
+  planEdit() { S.ui.planEdit = !S.ui.planEdit; render({ keepScroll: true }); },
+  exMove(t) {
+    const c = ctx(); if (!c || !c.day) return;
+    const i = Number(t.dataset.i), j = i + Number(t.dataset.d), a = c.day.exercises;
+    if (j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]]; applyPlanChange(c.day);
+  },
+  exRemove(t) {
+    const c = ctx(); if (!c || !c.day) return;
+    const ex = c.day.exercises[Number(t.dataset.i)]; if (!ex) return;
+    showSheet({
+      title: `„${ex.name}“ entfernen?`, message: `Die Übung verschwindet aus ${c.day.name}. Bisherige Daten bleiben im Verlauf.`,
+      actions: [{ label: "Entfernen", style: "destructive", onClick: () => { c.day.exercises = c.day.exercises.filter((x) => x !== ex); applyPlanChange(c.day); } }, { label: "Abbrechen" }],
+    });
+  },
+  exAdd() {
+    const c = ctx(); if (!c || !c.day) return;
+    const names = [...new Set([...S.plan.flatMap((d) => d.exercises.filter((e) => e.kind === "sets").map((e) => e.name)), ...S.plan.flatMap((d) => d.exercises.flatMap((e) => altsFor(e.key).map((a) => a.name)))])].sort((a, b) => a.localeCompare(b, "de"));
+    showSheet({
+      title: "Übung hinzufügen", message: "Name eintippen oder aus den Vorschlägen wählen.",
+      html: `<div class="form"><input id="exName" list="exlib" placeholder="Name der Übung" autocomplete="off" aria-label="Name der Übung"><datalist id="exlib">${names.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
+        <div class="field"><input id="exSets" inputmode="numeric" placeholder="Sätze" value="3" aria-label="Arbeitssätze"><input id="exReps" placeholder="Wdh." value="8–12" aria-label="Wiederholungen"></div>
+        <div class="field"><input id="exRest" inputmode="numeric" placeholder="Pause in Sekunden" value="90" aria-label="Pause in Sekunden"><select id="exWarm" aria-label="Aufwärmsätze"><option value="0">ohne Aufwärmsatz</option><option value="1">1 Aufwärmsatz</option></select></div></div>`,
+      actions: [{ label: "Hinzufügen", style: "primary", form: true, onClick: () => {
+        const name = document.getElementById("exName").value.trim();
+        if (!name) { toast("Bitte einen Namen eintragen"); return false; }
+        const sets = Math.max(1, Math.min(10, Math.round(parseNum(document.getElementById("exSets").value) || 3)));
+        const reps = document.getElementById("exReps").value.trim() || "8–12";
+        const rest = Math.max(0, Math.round(parseNum(document.getElementById("exRest").value) || 90));
+        c.day.exercises.push({ id: `${c.day.id}-${uid().slice(0, 6)}`, key: slug(name), name, kind: "sets", warmupSets: Number(document.getElementById("exWarm").value), workSets: sets,
+          reps, restLabel: rest ? `${rest} s` : "", restSec: rest, note: "", optional: false, failureLast: false });
+        applyPlanChange(c.day); toast("Übung hinzugefügt");
+      } }, { label: "Abbrechen" }],
+    });
+  },
   toggleEdit() { S.ui.edit = !S.ui.edit; render({ keepScroll: true }); },
   toggleNote() { S.ui.note = !S.ui.note; render({ keepScroll: true }); },
 
@@ -1053,7 +1102,8 @@ async function loadState() {
   if (!S.plan.length || (S.settings.planVersion || 0) < PLAN_VERSION) {
     const fresh = buildDefaultPlan();
     for (const old of plan) if (!old.deletedAt && !fresh.some((f) => f.id === old.id)) await DB.softDelete("plan", old);
-    S.plan = fresh;
+    // Tage, die Till selbst geändert hat, bleiben unberührt; alle anderen bekommen die neue Standardversion
+    S.plan = fresh.map((f) => plan.find((o) => o.id === f.id && o.customized && !o.deletedAt) || f);
     for (const d of S.plan) await DB.put("plan", d);
     S.settings.planVersion = PLAN_VERSION;
     await DB.put("meta", S.settings);
