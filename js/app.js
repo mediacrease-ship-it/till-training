@@ -10,11 +10,14 @@ import { lineChart, barChart, sparkline } from "./charts.js";
 import { art } from "./art.js";
 import { altsFor } from "./alternatives.js";
 import { imgUrls } from "./images.js";
+import { DEFAULT_FOODS, TEMPLATES } from "./meals.js";
+
+const APP_VERSION = "2026-11-16 · Mahlzeiten v1";
 
 /* =====================================================================
    State
    ===================================================================== */
-const MEALS = ["Frühstück", "Mittagessen", "Abendessen", "Snacks & Shakes"];
+const MEALS = ["Frühstück", "Pause", "Mittagessen", "Abendessen", "Nach dem Training", "Snacks & Shakes"];
 const S = {
   plan: [], sessions: [], body: [], foods: [], foodlog: [], photos: {}, photoRec: {},
   settings: { key: "settings", theme: "light", planVersion: 0 },
@@ -315,8 +318,8 @@ function viewFood() {
   h += `<div class="card"><div style="display:flex;align-items:baseline;justify-content:space-between"><div class="big">${pctDone} %</div><div style="color:var(--ink2);font-size:15px">${fmt(d.eaten)} von ${d.n} gegessen</div></div>
     <div class="progress" style="margin-top:12px;--acc:var(--good)"><i style="width:${pctDone}%"></i></div>
     ${d.planKcal || d.planProtein ? `<div class="stats" style="grid-template-columns:1fr 1fr">${d.planKcal ? `<div class="stat"><div class="v">${fmt(Math.round(d.kcal))}</div><div class="l">von ${fmt(Math.round(d.planKcal))} kcal</div></div>` : ""}${d.planProtein ? `<div class="stat"><div class="v">${fmt(Math.round(d.protein))} g</div><div class="l">von ${fmt(Math.round(d.planProtein))} g Protein</div></div>` : ""}</div>` : ""}</div>`;
-  for (const meal of MEALS) {
-    const items = foods.filter((f) => f.meal === meal);
+  for (const meal of [...MEALS, "Sonstiges"]) {
+    const items = foods.filter((f) => (meal === "Sonstiges" ? !MEALS.includes(f.meal) : f.meal === meal));
     if (!items.length) continue;
     h += `<div class="section-h">${esc(meal)}</div><div class="fcard">` + items.map((f) => {
       const p = portionOf(date, f.id), le = S.foodlog.find((l) => l.date === date && l.foodId === f.id), alt = le && le.alt;
@@ -399,6 +402,7 @@ function mealSheet(f) {
     title: f.name, message: plan ? `Geplant: ${plan}` : "",
     html: `<div class="form"><div style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2)">Oder etwas anderes gegessen?</div>
       <textarea id="altText" aria-label="Text mit Nährwerten einfügen" placeholder="Text aus dem Chat einfügen, z. B.&#10;Steak (80 g) | 190 kcal | 22 g Protein&#10;Curly Fries (150 g) | 240 kcal | 3 g Protein">${esc(text)}</textarea>
+      <div class="tags" style="margin:0">${TEMPLATES.map((t, i) => `<button class="gbtn glass" style="height:36px;font-size:13px" data-a="altTpl" data-i="${i}">${esc(t.name)}</button>`).join("")}</div>
       <div id="altPreview" class="imgnote" style="margin:0">${altPreviewHtml(text)}</div></div>`,
     actions: [
       { label: "Statt der Mahlzeit übernehmen", style: "primary", form: true, onClick: () => {
@@ -615,9 +619,10 @@ function viewSettings() {
       <button class="row" data-a="export"><div class="grow"><div class="t">Daten exportieren</div><div class="s">Backup als JSON-Datei sichern</div></div></button>
       <label class="row" for="importFile" style="cursor:pointer"><div class="grow"><div class="t">Daten importieren</div><div class="s">Backup (JSON) wiederherstellen</div></div></label>
       <button class="row" data-a="cacheImages"><div class="grow"><div class="t">Übungsbilder offline speichern</div><div class="s">Einmal im WLAN laden, dann auch ohne Netz im Gym sichtbar (ca. 3 MB)</div></div></button>
+      <button class="row" data-a="reloadApp"><div class="grow"><div class="t">Auf Update prüfen</div><div class="s">Lädt die neueste Version (Internet nötig)</div></div></button>
       <button class="row" data-a="wipe"><div class="grow"><div class="t" style="color:var(--warn)">Alle Trainingsdaten löschen</div></div></button></div>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
-    <div class="section-f">Alle Daten liegen nur auf diesem Gerät (IndexedDB): ${nSess} Trainings, ${S.body.length} Gewichtseinträge, ${S.foods.length} Mahlzeiten, ${Object.keys(S.photos).length} Fotos. ${DB.persistent ? "" : "Achtung: Speicher nicht verfügbar, Daten gehen beim Schließen verloren. "}Mache regelmäßig einen Export als Backup, besonders wenn die App nicht auf dem Home-Bildschirm liegt.<br><br>Übungsbilder: free-exercise-db (gemeinfrei, Unlicense), geladen über cdn.jsdelivr.net. Dabei wird nur die Bild-Adresse abgerufen, keine Daten aus der App gesendet.</div>`;
+    <div class="section-f">Alle Daten liegen nur auf diesem Gerät (IndexedDB): ${nSess} Trainings, ${S.body.length} Gewichtseinträge, ${S.foods.length} Mahlzeiten, ${Object.keys(S.photos).length} Fotos. ${DB.persistent ? "" : "Achtung: Speicher nicht verfügbar, Daten gehen beim Schließen verloren. "}Mache regelmäßig einen Export als Backup, besonders wenn die App nicht auf dem Home-Bildschirm liegt.<br><br>Übungsbilder: free-exercise-db (gemeinfrei, Unlicense), geladen über cdn.jsdelivr.net. Dabei wird nur die Bild-Adresse abgerufen, keine Daten aus der App gesendet.<br><br>Version: ${esc(APP_VERSION)}</div>`;
 }
 function viewRules() {
   return navbar({ back: "#/", backLabel: "Plan", title: "Regeln" }) + `<h1 class="large">Regeln</h1>` +
@@ -858,6 +863,8 @@ const A = {
   },
   foodToggle(t) { const date = S.ui.foodDate || dateStr(); setPortion(date, t.dataset.id, portionOf(date, t.dataset.id) === 1 ? 0 : 1); },
   foodHalf(t) { const date = S.ui.foodDate || dateStr(); setPortion(date, t.dataset.id, portionOf(date, t.dataset.id) === 0.5 ? 0 : 0.5); },
+  altTpl(t) { const ta = document.getElementById("altText"); if (!ta) return; ta.value = TEMPLATES[Number(t.dataset.i)].text; document.getElementById("altPreview").innerHTML = altPreviewHtml(ta.value); },
+  reloadApp() { toast("Suche nach Update …"); (navigator.serviceWorker ? navigator.serviceWorker.getRegistration() : Promise.resolve()).then((r) => r && r.update()).catch(() => {}).finally(() => setTimeout(() => location.reload(), 800)); },
   foodOpen(t) { const f = S.foods.find((x) => x.id === t.dataset.id); if (f) mealSheet(f); },
   foodAdd() { foodForm(null); },
   foodPaste() { foodPasteForm(); },
@@ -1055,6 +1062,17 @@ async function loadState() {
   S.body = body.filter((b) => !b.deletedAt);
   S.foods = foods.filter((f) => !f.deletedAt);
   S.foodlog = foodlog.filter((f) => !f.deletedAt);
+  // Beim ersten Start Tills Mahlzeiten eintragen (nur einmal; danach frei änderbar, auch löschbar)
+  if (!S.settings.foodsSeed) {
+    if (!S.foods.length) {
+      const t0 = Date.now() - 30 * 864e5;
+      for (const [meal, name, kcal, protein] of DEFAULT_FOODS) {
+        const f = { id: uid(), name, meal, kcal, protein, position: S.foods.length, createdAt: t0 };
+        S.foods.push(f); await DB.put("foods", f);
+      }
+    }
+    S.settings.foodsSeed = 1; await DB.put("meta", S.settings);
+  }
   S.photos = {}; S.photoRec = {};
   for (const p of photos) if (!p.deletedAt) { S.photos[p.key] = p.data; S.photoRec[p.key] = p; }
   const { save, drop } = splitStaleDrafts(S.sessions);
@@ -1068,6 +1086,11 @@ async function loadState() {
   render();
   DB.persistRequest();
   setTimeout(() => { if (!S.settings.imgCached) prefetchImages(false); }, 4000);
-  if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });
+  }
   window.__gt = { S, render, art };
 })();
