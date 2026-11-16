@@ -11,6 +11,7 @@ const A = {
   "trizepsdruecken-am-kabel": [["Trizepsdrücken Stange", "Andere Griffbreite, gleiche Bewegung."], ["Einarmiges Trizepsdrücken", "Gut bei Schulterbeschwerden."], ["Trizeps-Kickbacks Kabel", "Leichter, mehr Spannung am Ende."]],
   "beinstrecker-leicht": [["Beinstrecker einbeinig", "Jedes Bein einzeln, noch leichter."], ["Beinstrecker anderes Gerät", "Anderes Fabrikat, gleiche Bewegung."]],
   "bizepscurl-maschine-scott": [["Scott-Curl SZ-Stange", "Gleiche Position am Pult."], ["Bizepscurl am Kabel", "Konstante Spannung."], ["Konzentrationscurl", "Sitzend, Ellbogen am Oberschenkel."]],
+  "schraegbank-curls-kurzhantel": [["Bizepscurl am Kabel, hinter dem Körper", "Gleiche Dehnung am Kabel."], ["Bizepscurl Kurzhantel sitzend", "Ohne Schräge, Arme hängen lassen."], ["Bizepscurl Maschine / Scott", "Falls Bank besetzt."]],
   "hammercurls-kurzhantel": [["Hammercurls am Kabel, Seil", "Gleichmäßigere Spannung."], ["Hammercurls sitzend, abwechselnd", "Weniger Schwung."], ["Bizepscurl neutraler Griff Maschine", "Falls vorhanden."]],
   "latzug-schulterbreit": [["Latzug, neutraler Griff", "Schultergelenk-freundlicher."], ["Einarmiger Latzug am Kabel", "Seiten einzeln, links nach Gefühl."], ["Assistierte Klimmzüge", "Maschine nimmt Gewicht ab."]],
   "ueberzuege-am-kabel": [["Gerader-Arm-Latzug am Kabel", "Gleiches Prinzip mit Seil."], ["Überzüge Maschine", "Falls vorhanden."]],

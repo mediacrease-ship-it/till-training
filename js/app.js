@@ -12,7 +12,7 @@ import { altsFor } from "./alternatives.js";
 import { imgUrls } from "./images.js";
 import { DEFAULT_FOODS, TEMPLATES } from "./meals.js";
 
-const APP_VERSION = "2026-11-16 · Einarmig-Modus";
+const APP_VERSION = "2026-11-16 · Pull A v2 · Einarmig";
 
 /* =====================================================================
    State
@@ -221,7 +221,7 @@ function viewDay(id) {
       ${hint ? `<div class="hint ${hint.type === "increase" ? "up" : "warn"}">${hint.type === "increase" ? ICON.up : ICON.warn}${esc(hint.short)}</div>` : ""}</div>${status}</a>`;
   });
 
-  if (S.ui.planEdit) return h + `<button class="btn" data-a="exAdd">+ Übung hinzufügen</button><div class="section-f" style="text-align:center">Änderungen gelten für alle kommenden ${esc(day.name)}-Trainings. Bisherige Daten bleiben im Verlauf.</div>`;
+  if (S.ui.planEdit) return h + `<button class="btn" data-a="exAdd">+ Übung hinzufügen</button><button class="btn secondary" data-a="planReset">Auf Standardplan zurücksetzen</button><div class="section-f" style="text-align:center">Änderungen gelten für alle kommenden ${esc(day.name)}-Trainings. Bisherige Daten bleiben im Verlauf.</div>`;
   const sh = dr.shoulder;
   h += `<div class="section-h">Schulter links (optional)</div><div class="card"><div class="scale">` +
     Array.from({ length: 11 }, (_, v) => `<button data-a="shoulder" data-v="${v}" class="${sh === v ? "on " + (v >= 6 ? "high" : v >= 3 ? "mid" : "") : ""}" aria-pressed="${sh === v}" aria-label="Schulter ${v} von 10">${v}</button>`).join("") +
@@ -799,6 +799,21 @@ const A = {
         c.day.exercises.push({ id: `${c.day.id}-${uid().slice(0, 6)}`, key: slug(name), name, kind: "sets", warmupSets: Number(document.getElementById("exWarm").value), workSets: sets,
           reps, restLabel: rest ? `${rest} s` : "", restSec: rest, note: "", optional: false, failureLast: false });
         applyPlanChange(c.day); toast("Übung hinzugefügt");
+      } }, { label: "Abbrechen" }],
+    });
+  },
+  planReset() {
+    const c = ctx(); if (!c || !c.day) return;
+    showSheet({
+      title: `${c.day.name} zurücksetzen?`, message: "Die Übungen dieses Tages werden wieder wie im aktuellen Standardplan. Dein bisheriger Verlauf bleibt erhalten.",
+      actions: [{ label: "Zurücksetzen", style: "destructive", onClick: async () => {
+        const f = buildDefaultPlan().find((d) => d.id === c.day.id); if (!f) return;
+        const i = S.plan.findIndex((d) => d.id === f.id);
+        f.createdAt = c.day.createdAt || f.createdAt; if (i >= 0) S.plan[i] = f;
+        await DB.put("plan", f);
+        const dr = draftOf(f.id);
+        if (dr) { dr.exercises = f.exercises.map((ex) => { const o = dr.exercises.find((x) => x.key === ex.key); return o ? { ...o, exId: ex.id } : newSessionExercise(ex); }); saveSession(dr); }
+        S.ui.planEdit = false; render({ keepScroll: true }); toast("Standardplan wiederhergestellt");
       } }, { label: "Abbrechen" }],
     });
   },

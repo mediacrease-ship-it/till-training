@@ -1,7 +1,7 @@
 // Fest hinterlegter Trainingsplan (aus "Tills Trainingsplan.html" übernommen).
 // Wird beim ersten Start in IndexedDB geschrieben und ist dort später editierbar.
 // Wenn du hier etwas änderst: PLAN_VERSION erhöhen, dann wird der Plan neu eingespielt.
-export const PLAN_VERSION = 3;
+export const PLAN_VERSION = 4;
 
 // Standard laut Till: 1 Aufwärmsatz + 3 Arbeitssätze pro Übung.
 const DEFAULT_WARM = 1;
@@ -15,15 +15,15 @@ const RAW = {
   "pull-a": {
     name: "Pull A", short: "Mo", label: "Montag", weekday: 1, kind: "pull",
     focus: "Rücken · Bizeps", std: false,
-    note: "Ca. 1 Stunde. Aufwärmsatz nur bei den ersten Übungen je Muskel, die anderen sind dann schon warm (mit + Aufwärmsatz jederzeit ergänzbar).",
+    note: "Ca. 1 Stunde. 3 Rückenübungen, 4 Bizepsübungen (kurzer Kopf, langer Kopf, Brachialis, Abschluss). Aufwärmsatz nur bei den ersten Übungen je Muskel (mit + Aufwärmsatz jederzeit ergänzbar).",
     ex: [
       ["Schulter-Warm-up", 0, 1, "5 Min", "", WARMUP_PULL],
-      ["Bizepscurl Maschine / Scott", 1, 3, "8–12", "90 s", "Bizeps zuerst, solange er frisch ist. Arm fixiert, kein Schwung.", 0, 1],
-      ["Hammercurls Kurzhantel", 0, 3, "10–12", "90 s", "Bizeps-Unterbau + Unterarm. 1 Wdh. im Tank."],
-      ["Latzug, schulterbreit", 1, 3, "8–12", "2–3 Min", "Breite. Bizeps ist schon müde: Gewicht anfangs etwas niedriger. Nicht ganz breit greifen. 1–2 Wdh. im Tank."],
-      ["Rudern Maschine, Brust aufgelegt", 1, 3, "8–12", "2 Min", "Rücken-Dicke, kaum Pressen. 1–2 Wdh. im Tank."],
+      ["Latzug, schulterbreit", 1, 3, "8–12", "2–3 Min", "Breite. Nicht ganz breit greifen, Ellbogen nach unten zu den Hüften. 1–2 Wdh. im Tank. Schulter ab 3/10: Griff neutral oder Alternative."],
+      ["Rudern Maschine, Brust aufgelegt", 1, 3, "8–12", "2 Min", "Rücken-Dicke. Schulter schonen: Ellbogen nah am Körper, Schulterblätter nur leicht zusammen, Gewicht eher niedrig. Ab 3/10 Schulterschmerz: Alternative nehmen. 1–2 Wdh. im Tank."],
       ["Einarmiger Latzug am Kabel", 0, 3, "10–12 /Seite", "90 s", "Links nach Gefühl dosieren. 1 Wdh. im Tank."],
-      ["Überzüge am Kabel", 0, 3, "12–15", "90 s", "Lat isoliert, ohne Bizeps. Gleicht den müden Bizeps aus.", 0, 1],
+      ["Bizepscurl Maschine / Scott", 1, 3, "8–12", "90 s", "Kurzer Kopf (Dicke). Arm fixiert, kein Schwung.", 0, 1],
+      ["Schrägbank-Curls Kurzhantel", 0, 3, "10–12", "90 s", "Langer Kopf (Höhe/Peak). Bank ca. 45–60°, Arme hängen hinter dem Körper, volle Dehnung unten.", 0, 1],
+      ["Hammercurls Kurzhantel", 0, 3, "10–12", "90 s", "Brachialis: macht den Arm dicker. Daumen nach oben, 1 Wdh. im Tank."],
       ["Bizepscurl am Kabel", 0, 3, "10–12", "60 s", "Zum Schluss, konstante Spannung.", 0, 1],
       ["Beinbeuger sitzend", 0, 3, "12–15", "60 s", "Leicht, ruhig atmen. Bei Druckgefühl abbrechen.", 1],
     ],

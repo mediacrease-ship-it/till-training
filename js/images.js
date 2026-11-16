@@ -18,6 +18,7 @@ const MAP = {
  "bizepscurl-am-kabel-stehend": "Standing_Biceps_Cable_Curl",
  "bizepscurl-maschine-scott": "Machine_Preacher_Curls",
  "hammercurls-kurzhantel": "Hammer_Curls",
+ "schraegbank-curls-kurzhantel": "Incline_Dumbbell_Curl",
  "hammercurls-am-kabel-seil": "Cable_Hammer_Curls_-_Rope_Attachment",
  "trizepsdruecken-am-kabel": "Triceps_Pushdown_-_Rope_Attachment",
  "trizepsdruecken-kabel-seil": "Triceps_Pushdown_-_Rope_Attachment",
